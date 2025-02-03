@@ -37,6 +37,7 @@ ComPtr<ID3D11Buffer> vertexBuffer;
 ComPtr<ID3D11Buffer> indexBuffer;
 ComPtr<ID3D11Buffer> constantBufferModel;
 ComPtr<ID3D11Buffer> constantBufferCamera;
+
 ComPtr<ID3D11InputLayout> inputLayout;
 
 // Game
@@ -65,7 +66,7 @@ void Game::Initialize(HWND window, int width, int height) {
 	basicShader = new Shader(L"Basic");
 	basicShader->Create(m_deviceResources.get());
 
-	projection = Matrix::CreatePerspectiveFieldOfView(75.0f * XM_PI /180.0f, (float)width / (float)height, 0.01f, 100);
+	projection = Matrix::CreatePerspectiveFieldOfView(75.0f * XM_PI /180.0f, (float)width / (float)height, 0.01f, 100.0f);
 
 	auto device = m_deviceResources->GetD3DDevice();
 
@@ -111,14 +112,6 @@ void Game::Initialize(HWND window, int width, int height) {
 	device->CreateBuffer(&desc, &initData, vertexBuffer.ReleaseAndGetAddressOf());
 
 	{
-		std::vector<float> data =
-		{
-			-0.7f,0.5f, 0.0f, //v0
-			0.5f, 0.5f, 0.0f, //v1
-			0.5f, -0.5f, 0.0f, //v2
-			-0.5f, -0.5f, 0.0f, //v3
-		};
-
 
 		CD3D11_BUFFER_DESC descModel(
 			sizeof(ModelData), //la description a besoin de la taille en bit de notre tableau
@@ -151,11 +144,9 @@ void Game::Update(DX::StepTimer const& timer) {
 	
 	// add kb/mouse interact here
 	view = Matrix::CreateLookAt(
-		Vector3(
-			sin(timer.GetTotalSeconds()),
-			0, 
-			2*cos(timer.GetTotalSeconds())
-		)
+		Vector3(2 * sin(timer.GetTotalSeconds()), 0, 2 * cos(timer.GetTotalSeconds())),
+		Vector3::Zero,
+		Vector3::Up
 	);
 	if (kb.Escape)
 		ExitGame();
@@ -193,16 +184,17 @@ void Game::Render() {
 	context->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
 
 	ModelData dataModel = {};
-	dataModel.model = Matrix::CreateTranslation(Vector3(0.5f, 0, 0)).Transpose();
+	dataModel.model = Matrix::CreateTranslation(Vector3(0, 0, 0)).Transpose();
 	CameraData dataCamera = {};
-	dataCamera.projection = projection.Transpose();
 	dataCamera.view = view.Transpose();
+	dataCamera.projection = projection.Transpose();
+	
 
 	context->UpdateSubresource(constantBufferModel.Get(), 0, nullptr, &dataModel, 0, 0);
 	context->UpdateSubresource(constantBufferCamera.Get(), 0, nullptr, &dataCamera, 0, 0);
 
 	ID3D11Buffer* cbs[] = { constantBufferModel.Get(), constantBufferCamera.Get() };
-	context->VSGetConstantBuffers();
+	context->VSSetConstantBuffers(0,2,cbs);
 
 	context->DrawIndexed(6, 0, 0);
 	// envoie nos commandes au GPU pour etre afficher � l'�cran
@@ -236,6 +228,8 @@ void Game::OnWindowSizeChanged(int width, int height) {
 
 	// The windows size has changed:
 	// We can realloc here any resources that depends on the target resolution (post processing etc)
+
+	projection = Matrix::CreatePerspectiveFieldOfView(75.0f * XM_PI / 180.0f, (float)width / (float)height, 0.01f, 100.0f);
 }
 
 void Game::OnDeviceLost() {
