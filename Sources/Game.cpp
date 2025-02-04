@@ -37,7 +37,7 @@ struct CameraData
 Matrix view;
 Matrix projection;
 
-Cube cube;
+std::vector<Cube> cubes;
 
 VertexBuffer<VertexLayout_PositionUV> vertexBuffer;
 IndexBuffer indexBuffer;
@@ -74,7 +74,18 @@ void Game::Initialize(HWND window, int width, int height) {
 
 	projection = Matrix::CreatePerspectiveFieldOfView(75.0f * XM_PI /180.0f, (float)width / (float)height, 0.01f, 100.0f);
 
-	cube.Generate(m_deviceResources.get());
+
+	for(int x = -10; x <= 10; x++)
+	{
+		for (int y = -10; y <= 10; y++)
+		{
+			for (int z = -10; z <= 10; z++)
+			{
+				Cube& cube = cubes.emplace_back(Vector3{2.0f*x,2.0f * y,2.0f * z});
+				cube.Generate(m_deviceResources.get());
+			}
+		}
+	}
 	// TP: allouer vertexBuffer ici
 
 	constantBufferModel.Create(m_deviceResources.get());
@@ -133,10 +144,14 @@ void Game::Render() {
 	constantBufferModel.ApplyToVS(m_deviceResources.get());
 	constantBufferCamera.ApplyToVS(m_deviceResources.get(), 1);
 
-	cube.Draw(m_deviceResources.get());
+	for(auto cube : cubes)
+	{
+		constantBufferModel.data.model = cube.model.Transpose();
+		constantBufferModel.UpdateBuffer(m_deviceResources.get());
 
-	constantBufferModel.data.model = Matrix::Identity.Transpose();
-	constantBufferModel.UpdateBuffer(m_deviceResources.get());
+		cube.Draw(m_deviceResources.get());
+	}
+
 	constantBufferCamera.data.view = view.Transpose();
 	constantBufferCamera.data.projection = projection.Transpose();
 	constantBufferCamera.UpdateBuffer(m_deviceResources.get());

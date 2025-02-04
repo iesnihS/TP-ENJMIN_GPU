@@ -9,5 +9,5 @@ float4 main(Input input) : SV_TARGET {
     int mask = step(dist, .4f);
     //clip(mask - 0.1f);
     
-    return float4(input.uv,0,1);
+    return float4(input.uv,1,1);
 }
