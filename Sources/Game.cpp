@@ -7,6 +7,10 @@
 
 #include "PerlinNoise.hpp"
 #include "Engine/Shader.h"
+#include "Engine/VertexLayout.h"
+
+#include "Game/Cube.h"
+#include "Engine/Buffer.h"
 
 extern void ExitGame() noexcept;
 
@@ -33,12 +37,12 @@ struct CameraData
 Matrix view;
 Matrix projection;
 
-ComPtr<ID3D11Buffer> vertexBuffer;
-ComPtr<ID3D11Buffer> indexBuffer;
-ComPtr<ID3D11Buffer> constantBufferModel;
-ComPtr<ID3D11Buffer> constantBufferCamera;
+Cube cube;
 
-ComPtr<ID3D11InputLayout> inputLayout;
+VertexBuffer<VertexLayout_PositionUV> vertexBuffer;
+IndexBuffer indexBuffer;
+ConstantBuffer<ModelData> constantBufferModel;
+ConstantBuffer<CameraData> constantBufferCamera;
 
 // Game
 Game::Game() noexcept(false) {
@@ -66,67 +70,15 @@ void Game::Initialize(HWND window, int width, int height) {
 	basicShader = new Shader(L"Basic");
 	basicShader->Create(m_deviceResources.get());
 
+	GenerateInputLayout<VertexLayout_PositionUV>(m_deviceResources.get(), basicShader);
+
 	projection = Matrix::CreatePerspectiveFieldOfView(75.0f * XM_PI /180.0f, (float)width / (float)height, 0.01f, 100.0f);
 
-	auto device = m_deviceResources->GetD3DDevice();
-
-	const std::vector<D3D11_INPUT_ELEMENT_DESC> InputElementDescs = {
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	};
-	device->CreateInputLayout(
-		InputElementDescs.data(), InputElementDescs.size(),
-		basicShader->vsBytecode.data(), basicShader->vsBytecode.size(),
-		inputLayout.ReleaseAndGetAddressOf());
-
+	cube.Generate(m_deviceResources.get());
 	// TP: allouer vertexBuffer ici
-	std::vector<float> data = 
-	{
-		-0.7f,0.5f, 0.0f, //v0
-		0.5f, 0.5f, 0.0f, //v1
-		0.5f, -0.5f, 0.0f, //v2
-		-0.5f, -0.5f, 0.0f, //v3
-	};
 
-	std::vector<uint32_t> indexData =
-	{
-		0,1,2,
-		2,3,0
-	};
-
-
-	CD3D11_BUFFER_DESC desc(
-		sizeof(float) * data.size(), //la description a besoin de la taille en bit de notre tableau
-		D3D11_BIND_VERTEX_BUFFER); //on peut mettre plusieurs flag en gros la on utilise vertex psk on met que les positions
-	
-	CD3D11_BUFFER_DESC indexDesc(
-		sizeof(uint32_t) * indexData.size(),
-		D3D11_BIND_INDEX_BUFFER);
-
-	D3D11_SUBRESOURCE_DATA initData = {}; //obliger de l'initialisé psk sinon ca ne marche qu'en debug et pas en release
-	D3D11_SUBRESOURCE_DATA indexInitData = {};
-
-	indexInitData.pSysMem = indexData.data();
-	initData.pSysMem = data.data(); //data.data() ca donne un ptr vers le premier float
-
-	device->CreateBuffer(&indexDesc, &indexInitData, indexBuffer.ReleaseAndGetAddressOf());
-	device->CreateBuffer(&desc, &initData, vertexBuffer.ReleaseAndGetAddressOf());
-
-	{
-
-		CD3D11_BUFFER_DESC descModel(
-			sizeof(ModelData), //la description a besoin de la taille en bit de notre tableau
-			D3D11_BIND_CONSTANT_BUFFER); //on peut mettre plusieurs flag en gros la on utilise vertex psk on met que les positions
-	
-		CD3D11_BUFFER_DESC descCamera(
-			sizeof(CameraData), //la description a besoin de la taille en bit de notre tableau
-			D3D11_BIND_CONSTANT_BUFFER); //on peut mettre plusieurs flag en gros la on utilise vertex psk on met que les positions
-
-		D3D11_SUBRESOURCE_DATA initData = {}; //obliger de l'initialisé psk sinon ca ne marche qu'en debug et pas en release
-
-		device->CreateBuffer(&descModel, nullptr, constantBufferModel.ReleaseAndGetAddressOf());
-
-		device->CreateBuffer(&descCamera, nullptr, constantBufferCamera.ReleaseAndGetAddressOf());
-	}
+	constantBufferModel.Create(m_deviceResources.get());
+	constantBufferCamera.Create(m_deviceResources.get());
 }
 
 void Game::Tick() {
@@ -144,7 +96,7 @@ void Game::Update(DX::StepTimer const& timer) {
 	
 	// add kb/mouse interact here
 	view = Matrix::CreateLookAt(
-		Vector3(2 * sin(timer.GetTotalSeconds()), 0, 2 * cos(timer.GetTotalSeconds())),
+		Vector3(2 * sin(timer.GetTotalSeconds()),4, 2 * cos(timer.GetTotalSeconds())),
 		Vector3::Zero,
 		Vector3::Up
 	);
@@ -171,32 +123,25 @@ void Game::Render() {
 	context->OMSetRenderTargets(1, &renderTarget, depthStencil);
 	
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	context->IASetInputLayout(inputLayout.Get());
+	
+	ApplyInputLayout<VertexLayout_PositionUV>(m_deviceResources.get());
 
 	basicShader->Apply(m_deviceResources.get());
 
 	// TP: Tracer votre vertex buffer ici
-	ID3D11Buffer* vbs[] = {vertexBuffer.Get()};
-	const UINT strides[] = {sizeof(float) * 3}; //taille de chaque element
-	const UINT offsets[] = {0};
 
-	context->IASetVertexBuffers(0, 1, vbs, strides, offsets);
-	context->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+	constantBufferModel.ApplyToVS(m_deviceResources.get());
+	constantBufferCamera.ApplyToVS(m_deviceResources.get(), 1);
 
-	ModelData dataModel = {};
-	dataModel.model = Matrix::CreateTranslation(Vector3(0, 0, 0)).Transpose();
-	CameraData dataCamera = {};
-	dataCamera.view = view.Transpose();
-	dataCamera.projection = projection.Transpose();
-	
+	cube.Draw(m_deviceResources.get());
 
-	context->UpdateSubresource(constantBufferModel.Get(), 0, nullptr, &dataModel, 0, 0);
-	context->UpdateSubresource(constantBufferCamera.Get(), 0, nullptr, &dataCamera, 0, 0);
+	constantBufferModel.data.model = Matrix::Identity.Transpose();
+	constantBufferModel.UpdateBuffer(m_deviceResources.get());
+	constantBufferCamera.data.view = view.Transpose();
+	constantBufferCamera.data.projection = projection.Transpose();
+	constantBufferCamera.UpdateBuffer(m_deviceResources.get());
 
-	ID3D11Buffer* cbs[] = { constantBufferModel.Get(), constantBufferCamera.Get() };
-	context->VSSetConstantBuffers(0,2,cbs);
-
-	context->DrawIndexed(6, 0, 0);
+	context->DrawIndexed(indexBuffer.Size(), 0, 0);
 	// envoie nos commandes au GPU pour etre afficher � l'�cran
 	m_deviceResources->Present();
 }
