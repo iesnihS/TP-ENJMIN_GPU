@@ -3,11 +3,15 @@ struct Input {
     float2 uv : TEXCOORD0;
 };
 
+Texture2D tex : register(t0);
+SamplerState samplerState : register(s0);
+
 float4 main(Input input) : SV_TARGET {
     
     double dist = sqrt(pow(0.5f - input.uv.x, 2) + pow(0.5f - input.uv.y, 2));
     int mask = step(dist, .4f);
+    float4 color = tex.Sample(samplerState, input.uv/16);
     //clip(mask - 0.1f);
     
-    return float4(input.uv,1,1);
+    return color;
 }
