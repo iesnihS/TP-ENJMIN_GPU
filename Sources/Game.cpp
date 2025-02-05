@@ -10,7 +10,7 @@
 #include "Engine/VertexLayout.h"
 
 #include "Engine/Texture.h"
-#include "Game/Cube.h"
+#include "Game/Chunk.h"
 #include "Engine/Buffer.h"
 #include "Game/Camera.h"
 
@@ -69,7 +69,7 @@ void Game::Initialize(HWND window, int width, int height) {
 
 	camera.UpdateAspectRatio((float)width / (float)height);
 
-	Cube& cube = cubes.emplace_back(Vector3{ .0f,.0f,.0f});
+	Cube& cube = cubes.emplace_back(BlockId::BOOKSHELF,Vector3{ .0f,.0f,.0f});
 	cube.Generate(m_deviceResources.get());
 
 	texture.Create(m_deviceResources.get());
