@@ -13,6 +13,7 @@
 #include "Game/Chunk.h"
 #include "Engine/Buffer.h"
 #include "Game/Camera.h"
+#include "Game/World.h"
 
 extern void ExitGame() noexcept;
 
@@ -25,16 +26,13 @@ using Microsoft::WRL::ComPtr;
 Shader* basicShader;
 
 //deux slot dans le buffer pour pouvoir changer que le model sans changer les matrix de la camera
-struct ModelData
-{
-	Matrix model; //world space
-};
+
 
 Camera camera(75.0f, 1);
 
 Texture texture(L"terrain");
-std::vector<Chunk> cubes;
-
+//std::vector<Chunk> cubes;
+World world;
 VertexBuffer<VertexLayout_PositionUV> vertexBuffer;
 IndexBuffer indexBuffer;
 ConstantBuffer<ModelData> constantBufferModel;
@@ -69,11 +67,10 @@ void Game::Initialize(HWND window, int width, int height) {
 
 	camera.UpdateAspectRatio((float)width / (float)height);
 
-	Chunk& cube = cubes.emplace_back(BlockId::BOOKSHELF,Vector3{ .0f,.0f,.0f});
-	cube.Generate(m_deviceResources.get());
+	world.GenerateWorld(m_deviceResources.get());
 
 	texture.Create(m_deviceResources.get());
-	constantBufferModel.Create(m_deviceResources.get());
+	
 }
 
 void Game::Tick() {
@@ -121,20 +118,15 @@ void Game::Render() {
 
 	// TP: Tracer votre vertex buffer ici
 
-	constantBufferModel.ApplyToVS(m_deviceResources.get());
+	
 
 	camera.ApplyCamera(m_deviceResources.get());
 	texture.Apply(m_deviceResources.get());
 
-	for(auto cube : cubes)
-	{
-		constantBufferModel.data.model = cube.model.Transpose();
-		constantBufferModel.UpdateBuffer(m_deviceResources.get());
+	
 
-		cube.Draw(m_deviceResources.get());
-	}
-
-	context->DrawIndexed(indexBuffer.Size(), 0, 0);
+	world.DrawWorld(m_deviceResources.get());
+	
 	// envoie nos commandes au GPU pour etre afficher � l'�cran
 	m_deviceResources->Present();
 }

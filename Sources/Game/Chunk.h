@@ -7,15 +7,12 @@
 using namespace DirectX::SimpleMath;
 class Chunk
 {
-	std::vector<BlockId> blocksId;
-	VertexBuffer<VertexLayout_PositionUV> vb;
-	IndexBuffer ib;
-	void PushFace(Vector3 pos, Vector3 up, Vector3 right, int texId);
+	void PushFace(Vector3 pos, Vector3 up, Vector3 right, int texId, VertexBuffer<VertexLayout_PositionUV>* vb, IndexBuffer* ib);
 public :
 	Matrix model;
-
-	Chunk(Vector3 pos = Vector3::Zero);
-	void Generate(DeviceResources* device);
+	BlockId blockId;
+	Chunk(BlockId id, Vector3 pos = Vector3::Zero);
+	void Generate(VertexBuffer<VertexLayout_PositionUV>* vb, IndexBuffer* ib);
 	void Draw(DeviceResources* device);
 	
 
