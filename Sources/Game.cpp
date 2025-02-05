@@ -33,7 +33,7 @@ struct ModelData
 Camera camera(75.0f, 1);
 
 Texture texture(L"terrain");
-std::vector<Cube> cubes;
+std::vector<Chunk> cubes;
 
 VertexBuffer<VertexLayout_PositionUV> vertexBuffer;
 IndexBuffer indexBuffer;
@@ -69,7 +69,7 @@ void Game::Initialize(HWND window, int width, int height) {
 
 	camera.UpdateAspectRatio((float)width / (float)height);
 
-	Cube& cube = cubes.emplace_back(BlockId::BOOKSHELF,Vector3{ .0f,.0f,.0f});
+	Chunk& cube = cubes.emplace_back(BlockId::BOOKSHELF,Vector3{ .0f,.0f,.0f});
 	cube.Generate(m_deviceResources.get());
 
 	texture.Create(m_deviceResources.get());
