@@ -10,7 +10,6 @@
 #include "Engine/VertexLayout.h"
 
 #include "Engine/Texture.h"
-#include "Game/Chunk.h"
 #include "Engine/Buffer.h"
 #include "Game/Camera.h"
 #include "Game/World.h"
@@ -32,7 +31,7 @@ Camera camera(75.0f, 1);
 
 Texture texture(L"terrain");
 //std::vector<Chunk> cubes;
-World world;
+World world(2);
 VertexBuffer<VertexLayout_PositionUV> vertexBuffer;
 IndexBuffer indexBuffer;
 ConstantBuffer<ModelData> constantBufferModel;

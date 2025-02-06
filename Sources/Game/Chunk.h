@@ -1,19 +1,28 @@
 #pragma once
-
+#include "Block.h"
 #include "../Engine/Buffer.h"
 #include "../Engine/VertexLayout.h"
-#include "Block.h"
 
-using namespace DirectX::SimpleMath;
+#define CHUNK_SIZE 10
+
+struct ModelData
+{
+	Matrix model; //world space
+};
 class Chunk
 {
-	void PushFace(Vector3 pos, Vector3 up, Vector3 right, int texId, VertexBuffer<VertexLayout_PositionUV>* vb, IndexBuffer* ib);
-public :
-	Matrix model;
-	BlockId blockId;
-	Chunk(BlockId id, Vector3 pos = Vector3::Zero);
-	void Generate(VertexBuffer<VertexLayout_PositionUV>* vb, IndexBuffer* ib);
-	void Draw(DeviceResources* device);
 	
-
+	Matrix model;
+	VertexBuffer<VertexLayout_PositionUV> vb;
+	IndexBuffer ib;
+	ConstantBuffer<ModelData> modelb;
+	Vector3 dimension = { CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE };
+	BlockId data[CHUNK_SIZE][CHUNK_SIZE][CHUNK_SIZE];
+	bool HaveNeighboringBlock(Vector3& nPos, Chunk** neighboringChunks);
+	public:
+		Vector3 pos;
+		Chunk(Vector3 pos);
+		void InitChunk(uint32_t sizeY);
+		void GenerateChunk(Chunk** neighboringChuck, DeviceResources* device);
+		void DrawChunk(DeviceResources* device);
 };

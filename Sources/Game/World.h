@@ -1,22 +1,14 @@
 #pragma once
-#include "Block.h"
-#include "../Engine/Buffer.h"
-#include "../Engine/VertexLayout.h"
 
-#define WORLD_SIZE 10
-struct ModelData
-{
-	Matrix model; //world space
-};
-class World
-{
-	VertexBuffer<VertexLayout_PositionUV> vb;
-	IndexBuffer ib;
-	ConstantBuffer<ModelData> modelb;
-	Vector3 dimension = { WORLD_SIZE, WORLD_SIZE, WORLD_SIZE };
-	BlockId data[WORLD_SIZE][WORLD_SIZE][WORLD_SIZE];
+#include "Chunk.h"
+ class World
+ {
+	 std::vector<Chunk> displayingChunks;
+	 uint32_t GetFlat3DArrayIndex(uint32_t &x, uint32_t &y, uint32_t &z, uint32_t &size);
+	 uint32_t GetNeighboringArrayIndex(Vector3 dir,uint32_t ind, uint32_t size);
 	public:
-		World();
+		uint32_t sizeY;
+		World(uint32_t size);
 		void GenerateWorld(DeviceResources* device);
 		void DrawWorld(DeviceResources* device);
-};
+ };

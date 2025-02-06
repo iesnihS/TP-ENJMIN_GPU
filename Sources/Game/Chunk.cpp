@@ -1,46 +1,88 @@
 #include "pch.h"
 #include "Chunk.h"
+#include "Cube.h"
 
-
-Chunk::Chunk(BlockId id, Vector3 pos) : blockId(id)
+bool Chunk::HaveNeighboringBlock(Vector3& nPos, Chunk** neighboringChunks)
 {
-	model = Matrix::CreateTranslation(pos);
+	if (neighboringChunks[0] != nullptr || neighboringChunks[0]->data)
+	{
+
+	}
+	if (nPos.x >= dimension.x || nPos.y >= dimension.y || nPos.z >= dimension.z ||
+		nPos.x <0|| nPos.y <0|| nPos.z <0||
+		data[(int)nPos.x][(int)nPos.y][(int)nPos.z] == BlockId::EMPTY)
+		return false;
+	return true;
 }
 
-void Chunk::Generate(VertexBuffer<VertexLayout_PositionUV>* vb, IndexBuffer* ib)
+Chunk::Chunk(Vector3 pos) :pos(pos),model(Matrix::CreateTranslation(pos)) //"pincette" sinon il l'initialise avant d'entrée dans le constructeur
 {
-	BlockData data = BlockData::Get(blockId);
-	PushFace({ -0.5f, -0.5f, 0.5f }, Vector3::Up, Vector3::Right, data.texIdSide,vb, ib);
-	PushFace({ 0.5f, -0.5f, 0.5f }, Vector3::Up, Vector3::Forward, data.texIdSide,vb, ib);
-	PushFace({ 0.5f, -0.5f,-0.5f }, Vector3::Up, Vector3::Left, data.texIdSide,vb, ib);
-
-	PushFace({ -0.5f, -0.5f,-0.5f }, Vector3::Up, Vector3::Backward, data.texIdSide,vb, ib);
-	PushFace({ -0.5f,  0.5f, 0.5f }, Vector3::Forward, Vector3::Right, data.texIdTop,vb, ib);
-	PushFace({ -0.5f, -0.5f,-0.5f }, Vector3::Backward, Vector3::Right, data.texIdBottom,vb, ib);
 }
 
-void Chunk::Draw(DeviceResources* device)
+void Chunk::InitChunk(uint32_t sizeY)
 {
-	
+	for(int x = 0; x < dimension.x; x++)
+	{
+		for (int y = 0; y < dimension.y; y++)
+		{
+			for (int z = 0; z < dimension.z; z++)
+			{
+				BlockId id;
+				int posY = pos.y + y;
+				if (posY == sizeY * CHUNK_SIZE - 1)
+					id = BlockId::GRASS;
+				else if (posY == 0)
+					id = BEDROCK;
+				else if (posY == 2)
+					id = BlockId::EMPTY;
+				else if (posY >= dimension.y - dimension.y / 3.f)
+					id = BlockId::DIRT;
+				else
+					id = BlockId::STONE;
+				
+				data[x][y][z] = id;
+			}
+		}
+	}
 }
 
-Vector4 ToVec4(Vector3 v)
+void Chunk::GenerateChunk(Chunk** neighboringChuck, DeviceResources* device)
 {
-	return Vector4(v.x, v.y, v.z, 1.0f);
+	for (int x = 0; x < dimension.x; x++)
+	{
+		for (int y = 0; y < dimension.y; y++)
+		{
+			for (int z = 0; z < dimension.z; z++)
+			{
+				BlockId id = data[x][y][z];
+				if (id == BlockId::EMPTY)
+					continue;
+				Vector3 pos = { (float)x, (float)y, (float)z };
+				Cube cube = Cube(id, pos);
+				bool neighboringBlock[6] = {
+					HaveNeighboringBlock(pos + Vector3::Right, neighboringChuck),
+					HaveNeighboringBlock(pos + Vector3::Up, neighboringChuck),
+					HaveNeighboringBlock(pos + Vector3::Forward, neighboringChuck),
+
+					HaveNeighboringBlock(pos + Vector3::Left, neighboringChuck),
+					HaveNeighboringBlock(pos + Vector3::Down, neighboringChuck),
+					HaveNeighboringBlock(pos + Vector3::Backward, neighboringChuck) };
+				cube.Generate(&vb, &ib, neighboringBlock);
+			}
+		}
+	}
+
+	vb.Create(device);
+	ib.Create(device);
+	modelb.Create(device);
 }
 
-void Chunk::PushFace(Vector3 pos, Vector3 up, Vector3 right, int texId, VertexBuffer<VertexLayout_PositionUV>* vb, IndexBuffer* ib)
+void Chunk::DrawChunk(DeviceResources* device)
 {
-	float x1 = (texId % 16)/16.f;
-	float x2 = x1 + 1 / 16.f;
-	float y1 = floor(texId/16.)/16.;
-	float y2 = y1 + 1/16.f;
-
-	uint32_t a = vb->PushVertex({ ToVec4(pos),{x1, y2}});
-	uint32_t b = vb->PushVertex({ ToVec4(pos+up),{x1, y1}});
-	uint32_t c = vb->PushVertex({ ToVec4(pos+right),{x2, y2}});
-	uint32_t d = vb->PushVertex({ ToVec4(pos+up+right),{x2, y1}});
-
-	ib->PushTriangle(a, b, c);
-	ib->PushTriangle(c, b, d);
+	modelb.ApplyToVS(device);
+	vb.Apply(device, 0);
+	ib.Apply(device);
+	modelb.data.model = model.Transpose();
+	modelb.UpdateBuffer(device);
+	device->GetD3DDeviceContext()->DrawIndexed(ib.Size(), 0, 0);
 }
