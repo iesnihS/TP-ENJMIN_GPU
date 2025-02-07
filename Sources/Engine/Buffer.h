@@ -19,6 +19,8 @@ public:
 
 	void Create(DeviceResources* device)
 	{
+		if (vertices.size() <= 0)
+			return;
 		CD3D11_BUFFER_DESC desc(sizeof(TVertex) * vertices.size(), D3D11_BIND_VERTEX_BUFFER);
 
 		D3D11_SUBRESOURCE_DATA initData = {};
@@ -51,6 +53,8 @@ public:
 	IndexBuffer() {};
 	void Create(DeviceResources* device)
 	{
+		if (indices.size() <= 0)
+			return;
 		CD3D11_BUFFER_DESC desc(sizeof(uint32_t) * indices.size(), D3D11_BIND_INDEX_BUFFER);
 
 		D3D11_SUBRESOURCE_DATA initData = {};

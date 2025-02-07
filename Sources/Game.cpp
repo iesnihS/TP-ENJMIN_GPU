@@ -31,7 +31,7 @@ Camera camera(75.0f, 1);
 
 Texture texture(L"terrain");
 //std::vector<Chunk> cubes;
-World world(2);
+World world(6);
 VertexBuffer<VertexLayout_PositionUV> vertexBuffer;
 IndexBuffer indexBuffer;
 ConstantBuffer<ModelData> constantBufferModel;

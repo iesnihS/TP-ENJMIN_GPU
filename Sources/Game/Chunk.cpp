@@ -2,21 +2,37 @@
 #include "Chunk.h"
 #include "Cube.h"
 
-bool Chunk::HaveNeighboringBlock(Vector3& nPos, Chunk** neighboringChunks)
+bool Chunk::HaveNeighboringBlock(Vector3& nPos,Vector3 dir, Chunk** neighboringChunks)
 {
-	if (neighboringChunks[0] != nullptr || neighboringChunks[0]->data)
+	Vector3 newPos = nPos + dir;
+	if (dir.z > 0 && neighboringChunks[0] != nullptr && nPos.z == CHUNK_SIZE -1)
 	{
-
+		BlockId& id = neighboringChunks[0]->data[0][0][0];
+		return /*id == EMPTY ? false : */true;
 	}
-	if (nPos.x >= dimension.x || nPos.y >= dimension.y || nPos.z >= dimension.z ||
-		nPos.x <0|| nPos.y <0|| nPos.z <0||
-		data[(int)nPos.x][(int)nPos.y][(int)nPos.z] == BlockId::EMPTY)
+	if (newPos.x >= dimension.x || newPos.y >= dimension.y || newPos.z >= dimension.z ||
+		newPos.x <0|| newPos.y <0|| newPos.z <0||
+		data[(int)newPos.x][(int)newPos.y][(int)newPos.z] == BlockId::EMPTY)
 		return false;
 	return true;
 }
 
 Chunk::Chunk(Vector3 pos) :pos(pos),model(Matrix::CreateTranslation(pos)) //"pincette" sinon il l'initialise avant d'entrée dans le constructeur
 {
+}
+
+void Chunk::InitChunkWithBlock(BlockId id)
+{
+	for (int x = 0; x < dimension.x; x++)
+	{
+		for (int y = 0; y < dimension.y; y++)
+		{
+			for (int z = 0; z < dimension.z; z++)
+			{
+				data[x][y][z] = id;
+			}
+		}
+	}
 }
 
 void Chunk::InitChunk(uint32_t sizeY)
@@ -60,13 +76,13 @@ void Chunk::GenerateChunk(Chunk** neighboringChuck, DeviceResources* device)
 				Vector3 pos = { (float)x, (float)y, (float)z };
 				Cube cube = Cube(id, pos);
 				bool neighboringBlock[6] = {
-					HaveNeighboringBlock(pos + Vector3::Right, neighboringChuck),
-					HaveNeighboringBlock(pos + Vector3::Up, neighboringChuck),
-					HaveNeighboringBlock(pos + Vector3::Forward, neighboringChuck),
-
-					HaveNeighboringBlock(pos + Vector3::Left, neighboringChuck),
-					HaveNeighboringBlock(pos + Vector3::Down, neighboringChuck),
-					HaveNeighboringBlock(pos + Vector3::Backward, neighboringChuck) };
+					HaveNeighboringBlock(pos , Vector3::Right, neighboringChuck),
+					HaveNeighboringBlock(pos , Vector3::Up, neighboringChuck),
+					HaveNeighboringBlock(pos , Vector3::Forward, neighboringChuck),
+											 
+					HaveNeighboringBlock(pos , Vector3::Left, neighboringChuck),
+					HaveNeighboringBlock(pos , Vector3::Down, neighboringChuck),
+					HaveNeighboringBlock(pos , Vector3::Backward, neighboringChuck) };
 				cube.Generate(&vb, &ib, neighboringBlock);
 			}
 		}
